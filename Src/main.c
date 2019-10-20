@@ -20,6 +20,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -34,10 +35,17 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
+volatile uint32_t dht_value[100];
+volatile uint32_t dht_bit;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define CHECK_BIT(var, pos) (((var) & (1UL << (pos))) != 0)
+//#define SET_BIT(var, pos) ((var) |= (1UL << (pos)))
+#define CLR_BIT(var, pos) (var &= ~(1UL << (pos)))
 
 /* USER CODE END PD */
 
@@ -55,6 +63,9 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+void local_delay(unsigned int t);
+uint8_t reorder (uint8_t _in);
 
 /* USER CODE END PFP */
 
@@ -93,21 +104,67 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
+  	  HAL_TIM_Base_Start(&htim3);
 	char DataChar[100];
 	sprintf(DataChar,"\r\n DHT11\r\nUART1 for debug started on speed 115200\r\n");
 	HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+
+	  HAL_GPIO_WritePin(DHT11_WRITE_GPIO_Port, DHT11_WRITE_Pin, GPIO_PIN_RESET);
+	  HAL_Delay(20);
+	  HAL_GPIO_WritePin(DHT11_WRITE_GPIO_Port, DHT11_WRITE_Pin, GPIO_PIN_SET);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+
   while (1)
   {
-
-	  HAL_Delay(200);
 	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+
+	  uint8_t temp = 0;
+	  uint8_t hugo = 0;
+	  uint8_t   cs = 0;
+
+	  HAL_GPIO_WritePin(DHT11_WRITE_GPIO_Port, DHT11_WRITE_Pin, GPIO_PIN_RESET);
+	  HAL_Delay(20);
+	  HAL_GPIO_WritePin(DHT11_WRITE_GPIO_Port, DHT11_WRITE_Pin, GPIO_PIN_SET);
+	  dht_bit = 0;
+	  HAL_Delay(500);
+
+	  for (int i=2; i<42; i++) {
+		  if ( (dht_value[i] > 10) && (dht_value[i] < 35) )
+			  sprintf(DataChar,"0");
+		  if ( (dht_value[i] > 55) && (dht_value[i] < 90) ) {
+			  sprintf(DataChar,"1");
+			  if (i < 13)						hugo = hugo | (1UL << (i-2      ) );
+			  else if ((i > 15) && (i < 30))	temp = temp | (1UL << (i-2-16   ) );
+			  else if  (i > 30)					cs 	 =   cs | (1UL << (i-2-16-16) );
+		  }
+		HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+
+		if ( (i>7) && ((i-1)%8 == 0) ) {
+			sprintf(DataChar," ");
+			HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+		}
+	  }
+	  hugo = reorder(hugo);
+	  temp = reorder(temp);
+	  cs   = reorder(  cs);
+
+	sprintf(DataChar,"] hugo:%d; temp:%d; cs:%d;", (int)hugo, (int)temp, (int)cs );
+	HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+	if (cs == hugo + temp) {
+		sprintf(DataChar," cs->Ok." );
+			HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+	}
+	sprintf(DataChar,"\r\n[ ");
+		HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+
 
     /* USER CODE END WHILE */
 
@@ -154,6 +211,26 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+/***************************************************************/
+uint8_t reorder (uint8_t _in) {
+	uint8_t result = 0;
+	for (int i=0; i<8; i++) {
+		if (CHECK_BIT(_in,i)) {
+			//SET_BIT(result, 7-i);
+			result |= (1UL << (7-i));
+		}
+	}
+	return result;
+}
+/***************************************************************/
+
+void local_delay(unsigned int t) {
+	for (; t > 0; t--) {
+		__asm("nop");
+	}
+}
+/***************************************************************/
 
 /* USER CODE END 4 */
 
