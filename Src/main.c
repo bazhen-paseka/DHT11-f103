@@ -137,32 +137,42 @@ int main(void)
 	  HAL_Delay(500);
 
 	  for (int i=2; i<42; i++) {
-		  if ( (dht_value[i] > 10) && (dht_value[i] < 35) )
-			  sprintf(DataChar,"0");
-		  if ( (dht_value[i] > 55) && (dht_value[i] < 90) ) {
-			  sprintf(DataChar,"1");
+		sprintf(DataChar,"  %03d" , (int)dht_value[i]);
+		HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+
+	    if ( (dht_value[i] > 66) && (dht_value[i] < 88) ) {
+			  sprintf(DataChar,"(0)");
+			  HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+	    }
+
+		if ( (dht_value[i] > 115) && (dht_value[i] < 135) ) {
+			  sprintf(DataChar,"(1)");
+			  HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
 			  if (i < 13)						hugo = hugo | (1UL << (i-2      ) );
 			  else if ((i > 15) && (i < 30))	temp = temp | (1UL << (i-2-16   ) );
 			  else if  (i > 30)					cs 	 =   cs | (1UL << (i-2-16-16) );
-		  }
-		HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+		}
 
 		if ( (i>7) && ((i-1)%8 == 0) ) {
-			sprintf(DataChar," ");
+			sprintf(DataChar,"\r\n");
 			HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
 		}
 	  }
+
 	  hugo = reorder(hugo);
 	  temp = reorder(temp);
 	  cs   = reorder(  cs);
 
-	sprintf(DataChar,"] hugo:%d; temp:%d; cs:%d;", (int)hugo, (int)temp, (int)cs );
+	sprintf(DataChar,"hugo:%d; temp:%d;", (int)hugo, (int)temp );
 	HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
 	if (cs == hugo + temp) {
 		sprintf(DataChar," cs->Ok." );
-			HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+		HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
+	} else {
+		sprintf(DataChar," cs:%d;", (int)cs );
+		HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
 	}
-	sprintf(DataChar,"\r\n[ ");
+	sprintf(DataChar,"\r\n \r\n");
 		HAL_UART_Transmit(&huart1, (uint8_t *)DataChar, strlen(DataChar), 100);
 
 
@@ -217,7 +227,6 @@ uint8_t reorder (uint8_t _in) {
 	uint8_t result = 0;
 	for (int i=0; i<8; i++) {
 		if (CHECK_BIT(_in,i)) {
-			//SET_BIT(result, 7-i);
 			result |= (1UL << (7-i));
 		}
 	}

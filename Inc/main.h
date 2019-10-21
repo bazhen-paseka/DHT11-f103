@@ -62,14 +62,9 @@ void Error_Handler(void);
 #define DHT11_WRITE_GPIO_Port GPIOA
 #define LED_Pin GPIO_PIN_1
 #define LED_GPIO_Port GPIOA
-#define DHT11_READ_Pin GPIO_PIN_2
-#define DHT11_READ_GPIO_Port GPIOA
 #define DHT11_FALLING_Pin GPIO_PIN_3
 #define DHT11_FALLING_GPIO_Port GPIOA
 #define DHT11_FALLING_EXTI_IRQn EXTI3_IRQn
-#define DHT111_RISING_Pin GPIO_PIN_4
-#define DHT111_RISING_GPIO_Port GPIOA
-#define DHT111_RISING_EXTI_IRQn EXTI4_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
